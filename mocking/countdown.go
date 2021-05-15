@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+func main() {
+	sleeper := &ConfigurableSleeper{
+		duration: 1 * time.Second,
+		sleep:    time.Sleep,
+	}
+
+	Countdown(os.Stdout, sleeper)
+}
+
 const (
 	finalWord      = "Go!"
 	countdownStart = 3
@@ -18,17 +27,9 @@ type Sleeper interface {
 	Sleep()
 }
 
-type CountdownOperationsSpy struct {
-	Calls []string
-}
-
 type ConfigurableSleeper struct {
 	duration time.Duration
-	sleep    func(duration time.Duration)
-}
-
-func (c *ConfigurableSleeper) Sleep() {
-	c.sleep(c.duration)
+	sleep    func(time.Duration)
 }
 
 type SpyTime struct {
@@ -39,11 +40,19 @@ func (s *SpyTime) Sleep(duration time.Duration) {
 	s.durationSlept = duration
 }
 
-func (s *CountdownOperationsSpy) Sleep() {
+func (c *ConfigurableSleeper) Sleep() {
+	c.sleep(c.duration)
+}
+
+type CountdownOperationSpy struct {
+	Calls []string
+}
+
+func (s *CountdownOperationSpy) Sleep() {
 	s.Calls = append(s.Calls, sleep)
 }
 
-func (s *CountdownOperationsSpy) Write(_ []byte) (n int, err error) {
+func (s *CountdownOperationSpy) Write(p []byte) (n int, err error) {
 	s.Calls = append(s.Calls, write)
 	return
 }
@@ -51,19 +60,9 @@ func (s *CountdownOperationsSpy) Write(_ []byte) (n int, err error) {
 func Countdown(out io.Writer, sleeper Sleeper) {
 	for i := countdownStart; i > 0; i-- {
 		sleeper.Sleep()
-		_, err := fmt.Fprintln(out, i)
-		if err != nil {
-			return
-		}
+		fmt.Fprintln(out, i)
 	}
-	sleeper.Sleep()
-	_, err := fmt.Fprint(out, finalWord)
-	if err != nil {
-		return
-	}
-}
 
-func main() {
-	sleeper := &ConfigurableSleeper{1 * time.Second, time.Sleep}
-	Countdown(os.Stdout, sleeper)
+	sleeper.Sleep()
+	fmt.Fprint(out, finalWord)
 }

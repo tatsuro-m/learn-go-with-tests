@@ -8,23 +8,8 @@ import (
 )
 
 func TestCountdown(t *testing.T) {
-	t.Run("a", func(t *testing.T) {
-		buffer := &bytes.Buffer{}
-		Countdown(buffer, &CountdownOperationsSpy{})
-
-		got := buffer.String()
-		want := `3
-2
-1
-Go!`
-
-		if got != want {
-			t.Errorf("got %q want %q", got, want)
-		}
-	})
-
 	t.Run("sleep before every print", func(t *testing.T) {
-		spySleepPrinter := &CountdownOperationsSpy{}
+		spySleepPrinter := &CountdownOperationSpy{}
 		Countdown(spySleepPrinter, spySleepPrinter)
 
 		want := []string{
@@ -42,17 +27,33 @@ Go!`
 			t.Errorf("wanted calls %v got %v", want, spySleepPrinter.Calls)
 		}
 	})
+
+	t.Run("prints 3 to Go!", func(t *testing.T) {
+		buffer := &bytes.Buffer{}
+		Countdown(buffer, &CountdownOperationSpy{})
+
+		got := buffer.String()
+		want := `3
+2
+1
+Go!`
+
+		if got != want {
+			t.Errorf("got %q want %q", got, want)
+		}
+	})
 }
 
 func TestConfigurableSleeper(t *testing.T) {
-	t.Run("a", func(t *testing.T) {
-		sleepTime := 5 * time.Second
-		spyTime := &SpyTime{}
-		sleeper := ConfigurableSleeper{sleepTime, spyTime.Sleep}
-		sleeper.Sleep()
+	sleepTime := 5 * time.Second
+	SpyTime := &SpyTime{}
+	sleeper := ConfigurableSleeper{
+		duration: sleepTime,
+		sleep:    SpyTime.Sleep,
+	}
+	sleeper.Sleep()
 
-		if spyTime.durationSlept != sleepTime {
-			t.Errorf("should have slept for %v but sleep for %v", sleepTime, spyTime.durationSlept)
-		}
-	})
+	if SpyTime.durationSlept != sleepTime {
+		t.Errorf("should have slept for %v but slept for %v", sleepTime, SpyTime.durationSlept)
+	}
 }
